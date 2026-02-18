@@ -44,6 +44,14 @@ def asof_join(
     if not pd.api.types.is_datetime64_any_dtype(right[on]):
         raise ValueError(f"right['{on}'] must be datetime dtype.")
 
+    # Drop shared columns from right (except the merge key and by-columns)
+    # to prevent pd.merge_asof from creating _x/_y suffixes or dropping them.
+    by_cols = [by] if isinstance(by, str) else (list(by) if by else [])
+    keep_in_right = {on} | set(by_cols)
+    shared_cols = (set(left.columns) & set(right.columns)) - keep_in_right
+    if shared_cols:
+        right = right.drop(columns=list(shared_cols))
+
     kwargs: dict = {"on": on, "direction": direction}
     if by is not None:
         kwargs["by"] = by

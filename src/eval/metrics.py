@@ -14,8 +14,8 @@ from sklearn.metrics import (
     roc_auc_score,
     precision_recall_curve,
     roc_curve,
-    calibration_curve,
 )
+from sklearn.calibration import calibration_curve
 
 from src.utils.logger import logger
 

@@ -41,7 +41,7 @@ def process_session(session: dict) -> pd.DataFrame:
         Feature DataFrame for this session, or empty DataFrame on failure.
     """
     session_key = session["session_key"]
-    year = session.get("year", 2024)
+    year = session.get("year", 2023)
     meeting_name = session.get("meeting_name", "?")
 
     logger.info(f"Processing features: {meeting_name} (session_key={session_key})")
@@ -52,11 +52,11 @@ def process_session(session: dict) -> pd.DataFrame:
         logger.warning(f"Empty timeline for session {session_key} — skipping.")
         return pd.DataFrame()
 
-    # 2. Load bronze data
+    # 2. Load bronze data (FastF1 provides laps instead of intervals)
     race_control = _load_bronze(year, session_key, "race_control")
     weather = _load_bronze(year, session_key, "weather")
     position = _load_bronze(year, session_key, "position")
-    intervals = _load_bronze(year, session_key, "intervals")
+    laps = _load_bronze(year, session_key, "laps")
 
     # 3. Detect SC/VSC events and assign labels
     sc_events = detect_sc_events(race_control) if not race_control.empty else []
@@ -66,7 +66,8 @@ def process_session(session: dict) -> pd.DataFrame:
     # 4. Build features
     timeline = build_text_features(timeline, race_control)
     timeline = build_weather_features(timeline, weather)
-    timeline = build_dynamics_features(timeline, position, intervals)
+    # Pass laps as the "intervals" proxy for dynamics (position changes from laps)
+    timeline = build_dynamics_features(timeline, position, laps)
 
     return timeline
 

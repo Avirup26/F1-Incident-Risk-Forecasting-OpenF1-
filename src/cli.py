@@ -28,15 +28,15 @@ def setup() -> None:
 
 
 @cli.command()
-@click.option("--year", default=2024, show_default=True, help="F1 season year.")
+@click.option("--year", default=2023, show_default=True, help="F1 season year (2018+).")
 @click.option("--limit", default=None, type=int, help="Max sessions to fetch (for testing).")
 def ingest(year: int, limit: int | None) -> None:
-    """Fetch data from OpenF1 API and save as bronze parquet tables."""
-    from src.ingest_openf1.pipeline import run_ingestion_pipeline
+    """Fetch data via FastF1 (free, no API key needed) and save as bronze parquet tables."""
+    from src.ingest_fastf1.pipeline import run_fastf1_pipeline
 
     cfg.paths.setup()
-    logger.info(f"Starting ingestion for {year} season (limit={limit})...")
-    run_ingestion_pipeline(year=year, limit=limit)
+    logger.info(f"Starting FastF1 ingestion for {year} season (limit={limit})...")
+    run_fastf1_pipeline(year=year, limit=limit)
     logger.success("✅ Ingestion complete.")
 
 
@@ -71,6 +71,18 @@ def evaluate() -> None:
     logger.info("Running evaluation...")
     run_evaluation()
     logger.success("✅ Evaluation complete.")
+
+
+@cli.command()
+def app() -> None:
+    """Launch Streamlit dashboard."""
+    import subprocess
+    import sys
+
+    try:
+        subprocess.run([sys.executable, "-m", "streamlit", "run", "src/app/main.py"], check=True)
+    except KeyboardInterrupt:
+        sys.exit(0)
 
 
 if __name__ == "__main__":
