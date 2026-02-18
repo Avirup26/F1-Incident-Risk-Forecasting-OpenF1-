@@ -25,7 +25,6 @@ data/gold/
 
 # Models
 data/models/
-models/
 
 # Logs
 logs/
