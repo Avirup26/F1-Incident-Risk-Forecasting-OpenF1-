@@ -11,7 +11,7 @@ from src.features.feature_pipeline import process_session
 from src.app.components.risk_plot import render_risk_plot
 from src.app.components.message_table import render_message_table
 from src.app.components.feature_importance import render_feature_importance
-from src.app.components.track_map import render_track_map  # New component
+from src.app.components.track_map import render_track_map
 
 # Page Config (Must be first)
 st.set_page_config(
@@ -21,29 +21,156 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for "Attractive" UI
+# --- F1 Style CSS (High Legibility) -----------------------------------------
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&display=swap');
+
+    html, body, [class*="css"]  {
+        font-family: 'Titillium Web', sans-serif;
+        font-size: 18px; /* Base font size increase */
+        color: #E0E0E0;
+    }
+
     .reportview-container {
-        background: #0e1117;
+        background: #15151E;
     }
+    
     .main {
-        padding: 2rem;
+        background-color: #15151E;
     }
+
+    /* Headings */
+    h1, h2, h3 {
+        color: white;
+        text-transform: uppercase;
+        font-style: italic;
+        font-weight: 700;
+        letter-spacing: 2px;
+    }
+    
     h1 {
-        color: #FF4B4B;
-        font-family: 'Helvetica Neue', sans-serif;
+        font-size: 3.5rem; /* Larger Title */
+        border-bottom: 5px solid #FF1801;
+        padding-bottom: 15px;
+        margin-bottom: 30px;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
     }
-    .stMetric {
-        background-color: #1E1E1E;
-        padding: 10px;
-        border-radius: 5px;
-        border: 1px solid #333;
+    
+    h2 {
+        font-size: 2rem;
+        margin-top: 30px;
+        border-left: 5px solid #FF1801;
+        padding-left: 15px;
     }
-    /* Highlight the simulation slider */
+    
+    h3 {
+        font-size: 1.5rem;
+        color: #CCCCCC;
+    }
+
+    /* Metrics Cards */
+    div[data-testid="stMetric"] {
+        background-color: #1F1F27;
+        border-right: 5px solid #FF1801;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        transition: transform 0.2s;
+    }
+    
+    div[data-testid="stMetric"]:hover {
+        transform: scale(1.02);
+        border-right: 5px solid #FFFFFF;
+        background-color: #252530;
+    }
+
+    div[data-testid="stMetricLabel"] {
+        color: #EEEEEE !important; /* Brighter label */
+        font-size: 1.2rem !important;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    div[data-testid="stMetricValue"] {
+        color: white !important;
+        font-size: 3rem !important; /* Bigger Risk % */
+        font-weight: 700;
+        text-shadow: 0 0 10px rgba(255, 24, 1, 0.3);
+    }
+    
+    div[data-testid="stMetricDelta"] {
+        font-size: 1.1rem !important;
+    }
+
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background-color: #1A1A22;
+        border-right: 2px solid #333;
+    }
+    
+    section[data-testid="stSidebar"] .stMarkdown h2 {
+        font-size: 1.8rem;
+        border-left: none;
+        padding-left: 0;
+        color: #FF1801;
+    }
+    
+    .stSelectbox label {
+        font-size: 1.2rem;
+        color: white;
+    }
+
+    /* Buttons */
+    .stButton > button {
+        background-color: #FF1801;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 1.2rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 10px 24px;
+        transition: all 0.3s;
+    }
+    
+    .stButton > button:hover {
+        background-color: #FF4040;
+        box-shadow: 0 0 15px rgba(255, 24, 1, 0.6);
+    }
+
+    /* Slider */
     .stSlider > div > div > div > div {
-        background-color: #FF4B4B;
+        background-color: #FF1801;
     }
+    
+    /* Checkbox */
+    .stCheckbox label {
+        font-size: 1.2rem;
+    }
+
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: #1F1F27;
+        border-radius: 4px 4px 0 0;
+        color: #CCCCCC;
+        font-size: 1.2rem; /* Larger tabs */
+        padding: 12px 30px;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #FF1801;
+        color: white;
+        font-weight: bold;
+    }
+    
+    /* Table */
+    .stDataFrame {
+        font-size: 1.1rem;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -86,12 +213,11 @@ def load_drivers(year, session_key):
     if not path.exists():
         return {}
     df = pd.read_parquet(path)
-    # Create dict: "44" -> "HAM"
     return dict(zip(df["driver_number"].astype(str), df["driver_abbr"]))
 
 
 def main():
-    st.title("🏎️ F1 Incident Risk Forecasting")
+    st.title("F1 INCIDENT RISK FORECASTING")
     
     # Load Data & Model
     with st.spinner("Loading aggregated data..."):
@@ -129,25 +255,21 @@ def main():
 
     # --- Simulation Mode ----------------------------------------------------
     st.sidebar.divider()
-    st.sidebar.header("⏱️ Real-Time Simulation")
+    st.sidebar.header("Real-Time Simulation")
     
     use_simulation = st.sidebar.checkbox("Enable Replay Mode", value=False)
     
     min_time = subset["timestamp"].min()
     max_time = subset["timestamp"].max()
     
-    # Default: Show full session
     current_time = max_time
     
     if use_simulation:
-        # User selects time point
-        # Convert to datetime for slider? Streamlit sliders support datetime.
-        # But convert to python datetime first.
         start_dt = min_time.to_pydatetime()
         end_dt = max_time.to_pydatetime()
         
         current_time = st.sidebar.slider(
-            "Race Time (UTC)",
+            "RACE TIME (UTC)",
             min_value=start_dt,
             max_value=end_dt,
             value=start_dt,
@@ -157,19 +279,13 @@ def main():
         
         st.sidebar.info("Drag the slider to replay the race!")
     else:
-        st.sidebar.caption("Showing full post-race analysis.")
+        st.sidebar.caption("Show Full Post-Race Analysis")
 
     # --- Data Filtering -----------------------------------------------------
     
-    # Filter Risk Data
-    # For plot: show up to current_time (history)
     plot_df = subset[subset["timestamp"] <= current_time].copy()
-    
-    # Inference for *current* moment (last row of plot_df)
     current_risk_prob = 0.0
     
-    # We need to compute predictions for the WHOLE subset first (or at least up to now)
-    # efficiently. Since the model is fast, let's predict for plot_df.
     feature_cols = [c for c in subset.columns if c not in [
         "session_key", "meeting_key", "year", "meeting_name", "timestamp", 
         "y_sc_5m", "time_to_sc_seconds"
@@ -196,58 +312,50 @@ def main():
     
     with m1:
         st.metric(
-            label="Current Incident Risk",
+            label="INCIDENT RISK",
             value=f"{current_risk_prob:.1%}",
             delta=f"{current_risk_prob - (plot_df['prob_lgbm'].iloc[-2] if len(plot_df) > 1 else 0.0):.1%}",
             delta_color="inverse"
         )
     
     with m2:
-        # Time to SC? Only if label known (but in inference we don't know)
-        # Display current time
-        st.metric("Simulation Time", current_time.strftime("%H:%M:%S UTC"))
+        st.metric("SIMULATION TIME", current_time.strftime("%H:%M:%S UTC"))
         
     with m3:
-        # Latest Message Category?
-        st.metric("Session", f"{selected_meeting}")
+        st.metric("SESSION", f"{selected_meeting}")
 
 
-    # Main View: Risk Plot + Track Map
+    # Main View
     col_left, col_right = st.columns([2, 1])
     
     with col_left:
-        st.subheader("⚠️ Risk Timeline")
-        threshold = 0.5 # Fixed or from slider?
+        # Title handled by plot layout
+        threshold = 0.5 
         fig_risk = render_risk_plot(plot_df, threshold=threshold)
-        # Update layout to zoom into recent window?
-        # Maybe show full history up to now.
         st.plotly_chart(fig_risk, use_container_width=True)
         
     with col_right:
-        st.subheader("📍 Track Map")
+        st.subheader("TRACK MAP")
         if use_simulation:
-            # Load heavy bronze data only if needed
             pos_df = load_position_data(selected_year, session_key)
             drivers = load_drivers(selected_year, session_key)
             
             if not pos_df.empty:
                 render_track_map(pos_df, drivers, current_time)
             else:
-                st.info("No position data available for this session.")
+                st.info("No position data available.")
         else:
-            st.info("Enable Simulation Mode to see live track map.")
+            st.info("Enable Replay Mode in sidebar to view live track map.")
 
 
     # Detailed Data Tabs
     st.divider()
-    tab1, tab2, tab3 = st.tabs(["Race Control Messages", "Model Insights", "Debug Data"])
+    tab1, tab2, tab3 = st.tabs(["RACE CONTROL", "MODEL INSIGHTS", "DEBUG DATA"])
     
     with tab1:
         messages_df = load_race_control(selected_year, session_key)
         if not messages_df.empty:
-            # Filter messages up to current time
             messages_df = messages_df[messages_df["date"] <= current_time]
-            # Show latest first
             messages_df = messages_df.sort_values("date", ascending=False)
             render_message_table(plot_df, messages_df)
     
