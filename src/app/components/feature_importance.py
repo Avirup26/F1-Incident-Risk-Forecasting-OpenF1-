@@ -11,14 +11,15 @@ def render_feature_importance(model, feature_names: list[str], top_n: int = 20):
         st.warning("Model does not expose feature importance.")
         return
 
-    # Get importance
-    importance = model.feature_importance(importance_type="gain")
+    # Get importance (returns DataFrame with 'feature' and 'importance' columns)
+    df = model.feature_importance(importance_type="gain")
     
-    # Create DataFrame
-    df = pd.DataFrame({
-        "feature": feature_names,
-        "importance": importance
-    }).sort_values("importance", ascending=True).tail(top_n)
+    if df.empty:
+        st.info("No feature importance available.")
+        return
+
+    # Sort and take top N
+    df = df.sort_values("importance", ascending=True).tail(top_n)
 
     # Plot
     fig = px.bar(

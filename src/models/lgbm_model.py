@@ -120,11 +120,22 @@ class LGBMModel:
         X = self._build_features(df, fit=False)
         return self.clf.predict_proba(X)[:, 1]
 
-    def feature_importance(self) -> pd.DataFrame:
+    def feature_importance(self, importance_type: str = "gain") -> pd.DataFrame:
         """Return feature importances as a sorted DataFrame."""
         if not self.is_fitted or self.clf is None:
             return pd.DataFrame()
         importances = self.clf.feature_importances_
+        # Note: sklearn API for LGBMClassifier doesnt support importance_type arg in feature_importances_ property directly
+        # However, booster_ does. But let's stick to default for now or expose booster.
+        # actually LGBMClassifier.feature_importances_ respects the importance_type param set in constructor?
+        # No, it's usually "split".
+        # To get "gain", we might need to access the booster.
+        try:
+            importances = self.clf.booster_.feature_importance(importance_type=importance_type)
+        except Exception:
+            # Fallback
+            importances = self.clf.feature_importances_
+
         return (
             pd.DataFrame({"feature": self.feature_names_, "importance": importances})
             .sort_values("importance", ascending=False)
