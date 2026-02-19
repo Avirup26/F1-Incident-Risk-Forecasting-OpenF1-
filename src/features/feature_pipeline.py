@@ -72,12 +72,12 @@ def process_session(session: dict) -> pd.DataFrame:
     return timeline
 
 
-def run_feature_pipeline() -> None:
+def run_feature_pipeline(year: int | None = None) -> None:
     """
     Run the full feature pipeline for all ingested sessions.
 
-    Reads session metadata from bronze, processes each session, saves
-    silver per-session files, and concatenates to gold master_timeline.parquet.
+    Args:
+        year: Optional year to filter sessions by.
     """
     # Discover all sessions from bronze
     bronze_root = cfg.paths.bronze
@@ -86,10 +86,17 @@ def run_feature_pipeline() -> None:
         return
 
     all_sessions = []
-    for year_dir in sorted(bronze_root.iterdir()):
-        if not year_dir.is_dir():
+    # If specific year requested, only check that dir
+    years_to_scan = [bronze_root / str(year)] if year else sorted(bronze_root.iterdir())
+    
+    for year_dir in years_to_scan:
+        if not year_dir.exists() or not year_dir.is_dir():
             continue
-        year = int(year_dir.name)
+        try:
+            curr_year = int(year_dir.name)
+        except ValueError:
+            continue
+            
         for session_dir in sorted(year_dir.iterdir()):
             if not session_dir.is_dir():
                 continue
@@ -98,11 +105,11 @@ def run_feature_pipeline() -> None:
                 session_df = pd.read_parquet(session_parquet)
                 if not session_df.empty:
                     session = session_df.iloc[0].to_dict()
-                    session["year"] = year
+                    session["year"] = curr_year
                     all_sessions.append(session)
 
     if not all_sessions:
-        logger.error("No sessions found in bronze. Run `ingest` first.")
+        logger.error(f"No sessions found in bronze for year={year}. Run `ingest` first.")
         return
 
     logger.info(f"Building features for {len(all_sessions)} sessions...")
@@ -110,8 +117,7 @@ def run_feature_pipeline() -> None:
     gold_frames = []
     for session in tqdm(all_sessions, desc="Feature pipeline", unit="session"):
         session_key = session["session_key"]
-        year = session.get("year", 2024)
-
+        
         try:
             df = process_session(session)
         except Exception as e:
@@ -122,7 +128,7 @@ def run_feature_pipeline() -> None:
             continue
 
         # Save silver
-        silver_path = cfg.paths.silver / str(year) / str(session_key) / "features.parquet"
+        silver_path = cfg.paths.silver / str(session.get("year", 2024)) / str(session_key) / "features.parquet"
         silver_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_parquet(silver_path, index=False)
         logger.debug(f"Saved silver: {silver_path}")
@@ -141,7 +147,7 @@ def run_feature_pipeline() -> None:
     gold_path.parent.mkdir(parents=True, exist_ok=True)
     master.to_parquet(gold_path, index=False)
 
-    logger.info(
+    logger.success(
         f"✅ Gold master timeline saved: {len(master)} rows × {len(master.columns)} cols → {gold_path}"
     )
     logger.info(f"   Positive rate: {master['y_sc_5m'].mean()*100:.2f}%")

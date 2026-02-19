@@ -40,15 +40,18 @@ def ingest(year: int, limit: int | None) -> None:
     logger.success("✅ Ingestion complete.")
 
 
+
 @cli.command()
-def build_features() -> None:
+@click.option("--year", default=None, type=int, help="Optional: Filter by year (e.g. 2024).")
+def build_features(year: int | None) -> None:
     """Build timeline, labels, and features from bronze data."""
     from src.features.feature_pipeline import run_feature_pipeline
 
     cfg.paths.setup()
-    logger.info("Building features...")
-    run_feature_pipeline()
+    logger.info(f"Building features (year={year})...")
+    run_feature_pipeline(year=year)
     logger.success("✅ Feature pipeline complete.")
+
 
 
 @cli.command()
