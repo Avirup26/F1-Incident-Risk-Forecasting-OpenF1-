@@ -47,14 +47,23 @@ def render_risk_plot(
         ]["timestamp"]
 
         for ts in event_starts:
-            fig.add_vline(
-                x=ts,
-                line_dash="dash",
-                line_color="#FFD700",
-                line_width=2,
-                annotation_text="SC/VSC",
-                annotation_position="top",
-                annotation_font_color="#FFD700",
+            # Convert to ISO string — add_vline annotation has a midpoint arithmetic bug
+            # with datetime strings in newer Plotly+pandas, so use add_shape + add_annotation
+            ts_str = pd.Timestamp(ts).isoformat() if not isinstance(ts, str) else ts
+            fig.add_shape(
+                type="line",
+                x0=ts_str, x1=ts_str,
+                y0=0, y1=1,
+                xref="x", yref="paper",
+                line=dict(color="#FFD700", width=2, dash="dash"),
+            )
+            fig.add_annotation(
+                x=ts_str, y=1,
+                xref="x", yref="paper",
+                text="SC/VSC",
+                showarrow=False,
+                font=dict(color="#FFD700", size=10),
+                yanchor="bottom",
             )
 
     # Threshold line

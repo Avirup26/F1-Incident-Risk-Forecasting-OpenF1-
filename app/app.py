@@ -8,14 +8,21 @@ Features:
   - Feature importance visualization
   - Model card with no-leakage statement
 """
-import pandas as pd
-import streamlit as st
+import sys
 from pathlib import Path
 
+# Ensure the project root is on sys.path so both `src` and `app` are importable
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+import pandas as pd
+import streamlit as st
+
 from src.config import cfg
-from app.components.risk_plot import render_risk_plot
-from app.components.message_table import render_message_table
-from app.components.feature_importance import render_feature_importance
+from components.risk_plot import render_risk_plot
+from components.message_table import render_message_table
+from components.feature_importance import render_feature_importance
 
 st.set_page_config(
     page_title="F1 SC/VSC Risk Forecaster",
